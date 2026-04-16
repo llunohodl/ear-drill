@@ -19,11 +19,9 @@ mv package tone
 
 rm *.tgz
 
-cd ../assets
-wget https://github.com/nbrosowsky/tonejs-instruments/archive/refs/heads/master.zip
-unzip master.zip
-rm master.zip
-# remove extra files
-find . -name *.wav -delete
-find . -name *.wav -delete
+# Pico css
+wget https://github.com/picocss/pico/archive/refs/heads/main.zip
+unzip main.zip
+mv pico-main pico
 
+rm *.zip
