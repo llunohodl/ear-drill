@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Note drill</title>
+    <script src="./vendor/alphatab/dist/alphaTab.min.js"></script>
+    <script src="./vendor/tone/build/Tone.js"></script>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        textarea { width: 100%; height: 60px; font-family: monospace; }
+        #tab-container { 
+            margin-top: 20px; 
+            border: 1px solid #ccc; 
+            padding: 10px; 
+            min-height: 200px;
+            min-width: 600px;
+            overflow-x: auto;
+            font-size: 16px;
+        }
+        
+        .error { color: red; font-weight: bold; margin-top: 10px; }
+        .controls { margin-bottom: 20px; }
+        button { padding: 10px 20px; cursor: pointer; font-size: 16px; }
+    </style>
+</head>
+<body>
+
+    <h1>Note Drill</h1>
+    <button onclick="generateMelody()">Generate</button>
+    <button onclick="playMelody()">Play</button>
+    <button onclick="renderTabs()">Show Notes</button>
+    <div id="tab-container"></div>
+
+
+    <script>
+
+        const SCALE_PATTERNS = {
+            diatonic_major: [0, 2, 4, 5, 7, 9, 11],
+            diatonic_minor: [0, 2, 3, 5, 7, 8, 10],
+            pentatonic_major: [0, 2, 4, 7, 9],
+            pentatonic_minor: [0, 3, 5, 7, 10],
+            blues: [0, 3, 5, 6, 7, 10]
+        };
+        const NOTES = ["E", "F", "F#", "G", "G#", "A", "A#", "B", "C", "C#", "D", "D#"];
+        const OCTAVES = ["3","4","5"];
+
+        const OSC_TYPES = ["sine", "square", "sawtooth", "triangle"];
+        const MOD_TYPES = ["am", "fm", "fat"]; 
+
+        window.currentNotes = [];
+
+        function getRandomSynth() {
+            const type = MOD_TYPES[Math.floor(Math.random() * MOD_TYPES.length)] + 
+                         OSC_TYPES[Math.floor(Math.random() * OSC_TYPES.length)];
+
+            const settings = {
+                oscillator: { type: type },
+                envelope: {
+                    attack: Math.random() * 0.1,
+                    decay: 0.2,
+                    sustain: Math.random() * 0.5,
+                    release: Math.random() * 2 + 0.5
+                }
+            };
+            const reverb = new Tone.Reverb(Math.random() * 3 + 1).toDestination();
+            const delay = new Tone.FeedbackDelay("8n", Math.random() * 0.4).connect(reverb);
+
+            return new Tone.PolySynth(Tone.Synth, settings).connect(delay);
+        }
+
+        function generateScale() {
+            //Random root
+            const rootNote = NOTES[Math.floor(Math.random() * NOTES.length)];
+            const octaveNumber = OCTAVES[Math.floor(Math.random() * OCTAVES.length)];
+            //Random octave
+            const scaleTypes = Object.keys(SCALE_PATTERNS);
+            const selectedType = scaleTypes[Math.floor(Math.random() * scaleTypes.length)];
+            //Rabdom scale
+            const pattern = SCALE_PATTERNS[selectedType];
+
+            const currentScale = pattern.map(interval => {
+                return Tone.Frequency(rootNote + octaveNumber).transpose(interval).toNote();
+            });
+
+            return currentScale
+        }
+
+        async function generateMelody() {
+            
+            const scale = generateScale();
+            let   scaleNotesToPos = {};
+            window.synth = getRandomSynth().toDestination();
+            window.currentNotes = [];
+            window.velocity = [];
+            window.currentPositions = [];
+
+            scale.forEach(note => {
+                const { pitch, octave } = parseNoteString(note);
+                let pos = getGuitarPosition(pitch, octave);
+                if(pos)
+                    scaleNotesToPos.note = pos;
+            });
+            
+            const notes = Object.keys(scaleNotesToPos);
+            for (let i = 0; i < 16; i++) {
+                const note = notes[Math.floor(Math.random() * notes.length)];
+                window.velocity.push(Math.random() * 0.5 + 0.5);
+                window.currentNotes.push(note);
+                window.currentPositions.push(scaleNotesToPos[note]);
+            }
+            playMelody();
+        }
+
+        async function playMelody(){
+            if(!window.synth)
+            {
+                generateMelody();
+                return;
+            }
+            else
+            {
+                await Tone.start();
+                const now = Tone.now();
+                window.currentNotes.forEach( (item,idx) => {
+                    window.synth.triggerAttackRelease(item, "8n", now + idx * 0.25, window.velocity[idx]);
+                });
+            }
+        }
+
+
+
+        // 2. HELPER: Parse Note String (e.g., "C#2" -> { pitch: 0, octave: 2 })
+        function parseNoteString(noteStr) {
+            const regex = /^([A-G])(#|b)?(\d+)$/;
+            const match = noteStr.match(regex);
+            if (!match) throw new Error(`Invalid note format: ${noteStr}`);
+
+            const noteName = match[1];
+            const accidental = match[2] || '';
+            const octave = parseInt(match[3], 10);
+
+            const pitchMap = { 'C': 0, 'D': 2, 'E': 4, 'F': 5, 'G': 7, 'A': 9, 'B': 11 };
+            let pitch = pitchMap[noteName];
+
+            if (accidental === '#') pitch += 1;
+            if (accidental === 'b') pitch -= 1;
+
+            // Handle edge cases for pitch wrapping (e.g. E# is F, Cb is B)
+            if (pitch < 0) { pitch += 12; /* octave -= 1; */ } 
+            if (pitch > 11) { pitch -= 12; /* octave += 1; */ }
+
+            return { pitch, octave };
+        }
+
+        // 3. HELPER: Calculate MIDI Value
+        // C-1 = 0, C0 = 12, C1 = 24, C2 = 36...
+        function getMidiValue(pitch, octave) {
+            return (octave + 1) * 12 + pitch;
+        }
+
+        // 4. HELPER: Map Pitch to Guitar String/Fret (Standard Tuning)
+        function getGuitarPosition(pitch, octave) {
+            const noteMidi = getMidiValue(pitch, octave);
+
+            // Standard Tuning MIDI Values
+            // String 6 (Low E) to String 1 (High E)
+            const tuning = [
+                { string: 6, midi: 40 }, // E2
+                { string: 5, midi: 45 }, // A2
+                { string: 4, midi: 50 }, // D3
+                { string: 3, midi: 55 }, // G3
+                { string: 2, midi: 59 }, // B3
+                { string: 1, midi: 64 }  // E4
+            ];
+
+            // Find the first string where the note is playable (fret >= 0)
+            // We prefer lower strings (higher number) for lower notes
+            for (let i = 0; i < tuning.length; i++) {
+                const t = tuning[i];
+                const fret = noteMidi - t.midi;
+
+                // Check if fret is within reasonable range (0 to 24)
+                if (fret >= 0 && fret <= 24) {
+                    return `${fret}.${t.string}`;
+                }
+            }
+
+            return null;
+        }
+
+        // 5. MAIN: Build AlphaTab Score
+        async function renderTabs() {    
+            
+            try {
+
+                console.log(`Print: ${window.currentNotes}`);
+                // Process Notes
+                let tab = '\n:8';
+                window.currentPositions.forEach( (pos,idx) => {
+
+                    if( idx % 8 == 0 )
+                    {
+                        if( idx > 0 )
+                            tab += "|";
+                        tab += "\n";
+                    }
+                    tab += ' ' + pos;
+                });
+                
+                if(!window.api)
+                {
+                    const element = document.getElementById('tab-container');
+                    element.innerHTML = tab;
+                    const api = new alphaTab.AlphaTabApi(element, {
+                        tex: true
+                    });
+                    window.api = api;
+                }
+                else
+                {
+                    await window.api.tex(tab);
+                }
+
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+    </script>
+</body>
+</html>
