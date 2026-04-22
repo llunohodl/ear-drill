@@ -24,4 +24,15 @@ wget https://github.com/picocss/pico/archive/refs/heads/main.zip
 unzip main.zip
 mv pico-main pico
 
+wget https://github.com/nbrosowsky/tonejs-instruments/archive/refs/heads/master.zip
+unzip master.zip 
+mv tonejs-instruments-master tonejs-instruments
+find ./tonejs-instruments -type f -name *.wav -delete
+find ./tonejs-instruments -type f -name *.ogg -delete
+
 rm *.zip
+
+mkdir ../assets
+mv tonejs-instruments/samples ../assets/samples
+mv tonejs-instruments/Tonejs-Instruments.js ..
+rm -rf tonejs-instruments

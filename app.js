@@ -13,8 +13,47 @@ const OSC_TYPES = ["sine", "square", "sawtooth", "triangle"];
 const MOD_TYPES = ["am", "fm", "fat"]; 
 
 
+function getFxPath(synth)
+{
+    dist = new Tone.Distortion(Math.random() * 0.5);
+    
+    if(Math.random() >= 0.5)
+    {
+        modulation = new Tone.Chorus(Math.random() * 8 + 2, 
+                                     Math.random() * 2.5 + 0.5, 0.5).start();
+    }
+    else
+    {
+        modulation = new Tone.Phaser({"frequency" : 5 + Math.random()*20, 
+                                      "octaves" : 1 + Math.random() * 3, 
+                                      "baseFrequency" : 100 +  Math.random() * 200 });
+    }
+    
+    delay = new Tone.FeedbackDelay("8n", Math.random() * 0.4);
+
+    if(Math.random() >= 0.5)
+    {
+        space = new Tone.Reverb(Math.random() * 9 + 1);
+    }
+    else
+    {
+        space = new Tone.JCReverb(Math.random() * 0.85 + 0.15).toDestination();
+    }
+
+    return synth.chain(dist, modulation, delay, space, Tone.Destination);
+}
 
 function getRandomSynth() {
+
+    if( window.instruments )
+    {
+        const keys = Object.keys(instruments);
+        const randomKey = keys[Math.floor(Math.random() * keys.length)];
+        console.log(`selected instrument: ${randomKey}`);
+        return getFxPath(instruments[randomKey]);
+    }
+
+    // Failback for html only
     const type = MOD_TYPES[Math.floor(Math.random() * MOD_TYPES.length)] + 
                     OSC_TYPES[Math.floor(Math.random() * OSC_TYPES.length)];
 
@@ -30,10 +69,9 @@ function getRandomSynth() {
             release: Math.random() * 2 + 0.5
         }
     };
-    const reverb = new Tone.Reverb(Math.random() * 3 + 1).toDestination();
-    const delay = new Tone.FeedbackDelay("8n", Math.random() * 0.4).connect(reverb);
 
-    return new Tone.PolySynth(Tone.Synth, settings).connect(delay);
+    synth = new Tone.PolySynth(Tone.Synth, settings);
+    return getFxPath(synth);
 }
 
 function generateApplicature() {
@@ -46,7 +84,7 @@ function generateApplicature() {
     {
         // quick fix for A2 - D#2 (lower than open 6 string)
         rootNote = 'E';
-        getGuitarPosition(rootNote+octaveNumber);
+        basePos = getGuitarPosition(rootNote+octaveNumber);
     }
     
 
@@ -87,10 +125,23 @@ function generateApplicature() {
 async function generateMelody() {
     
     const applicature = generateApplicature();
-    window.synth = getRandomSynth().toDestination();
+    
     window.currentNotes = [];
     window.velocity = [];
     window.currentPositions = [];
+
+    if( window.instruments )
+    {
+        const keys = Object.keys(instruments);
+        const randomKey = keys[Math.floor(Math.random() * keys.length)];
+        console.log(`selected instrument: ${randomKey}`);
+        window.synth = getFxPath(instruments[randomKey]);
+    }
+    else
+    {
+        console.log(`selected random synth`);
+        window.synth = getFxPath(getRandomSynth());
+    }
     
     const notes = Object.keys(applicature);
     for (let i = 0; i < 16; i++) {
@@ -216,4 +267,19 @@ async function renderTabs() {
     } catch (e) {
         console.error(e);
     }
+}
+
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+        .then(reg => console.log('Service Worker registered!'))
+        .catch(err => console.log('Registration failed:', err));
+    });
+
+    window.instruments = SampleLibrary.load({
+                ext: '.mp3',
+                baseUrl: "assets/samples/"
+        });
+    Tone.loaded();
+    console.log('Instruments loadaed');
 }
