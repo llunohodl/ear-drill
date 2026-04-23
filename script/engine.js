@@ -126,9 +126,12 @@ async function generateMelody() {
     
     const applicature = generateApplicature();
     
-    window.currentNotes = [];
+    window.notes = [];
     window.velocity = [];
     window.currentPositions = [];
+
+    if(window.synth)
+        window.synth.triggerRelease();
 
     if( window.instruments )
     {
@@ -147,29 +150,41 @@ async function generateMelody() {
     for (let i = 0; i < 16; i++) {
         const note = notes[Math.floor(Math.random() * notes.length)];
         window.velocity.push(Math.random() * 0.5 + 0.5);
-        window.currentNotes.push(note);
+        window.notes.push(note);
         window.currentPositions.push(applicature[note]);
     }
-    playMelody();
 }
 
-async function playMelody(){
+async function playMelody(begin = null, end = null){
+
     if(!window.synth)
-    {
-        generateMelody();
         return;
-    }
-    else
+    window.synth.triggerRelease();
+
+    if(!begin)
+        begin = 0;
+    if(!end)
+        end = window.notes.length - 1;
+
+    Tone.Transport.bpm.value = Number(document.getElementById('tempo-slider').value);
+    await Tone.start();
+
+    let now = Tone.now();
+    for (let i = begin; i <= end; i++)
     {
-        await Tone.start();
-        const now = Tone.now();
-        window.currentNotes.forEach( (item,idx) => {
-            window.synth.triggerAttackRelease(item, "8n", now + idx * 0.25, window.velocity[idx]);
-            console.log( item + ':' + window.velocity[idx]);
-        });
+        window.synth.triggerAttackRelease(window.notes[i], "8n", now, window.velocity[i]);
+        now += 1 / 8; // eighth
     }
 }
 
+async function playLoop(){
+    let begin = Number(document.getElementById('loop-start').value);
+    let end = Number(document.getElementById('loop-end').value);
+    if (begin > end) {
+        [begin, end] = [end, begin];
+    }
+    playMelody(begin,end);
+};
 
 
 function parseNoteString(noteStr) {
@@ -236,7 +251,7 @@ async function renderTabs() {
     
     try {
 
-        console.log(`Print: ${window.currentNotes}`);
+        console.log(`Print: ${window.notes}`);
         // Process Notes
         let tab = '\n:8';
         window.currentPositions.forEach( (pos,idx) => {
@@ -271,7 +286,7 @@ async function renderTabs() {
 
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
+    navigator.serviceWorker.register('./script/sw.js')
         .then(reg => console.log('Service Worker registered!'))
         .catch(err => console.log('Registration failed:', err));
     });
@@ -282,4 +297,7 @@ if ('serviceWorker' in navigator) {
         });
     Tone.loaded();
     console.log('Instruments loadaed');
+
+    generateMelody();
+    console.log('Melody geneated');
 }

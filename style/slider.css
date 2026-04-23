@@ -1,0 +1,99 @@
+.loop-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1rem;
+  background: var(--pico-card-background-color, transparent);
+  border-radius: var(--pico-border-radius);
+  margin: 1.5rem 0;
+}
+
+.control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.control-group label {
+  font-weight: 500;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+/* Dual slider track */
+.dual-slider-track {
+  position: relative;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  padding: 0 0.25rem;
+}
+
+/* Inactive track background */
+.dual-slider-track::before {
+  content: '';
+  position: absolute;
+  left: 0; right: 0;
+  height: 0.35rem;
+  background: var(--pico-muted-border-color);
+  border-radius: 2px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* Active loop highlight */
+.slider-highlight {
+  position: absolute;
+  height: 0.35rem;
+  background: var(--pico-primary);
+  border-radius: 2px;
+  top: 50%;
+  transform: translateY(-50%);
+  transition: left 0.15s ease, width 0.15s ease;
+  pointer-events: none;
+}
+
+/* Stack native sliders */
+.dual-slider-track input[type="range"] {
+  position: absolute;
+  width: 100%;
+  margin: 0;
+  appearance: none;
+  background: transparent;
+  pointer-events: none;
+}
+
+/* Make thumbs interactive */
+.dual-slider-track input[type="range"]::-webkit-slider-thumb {
+  pointer-events: auto;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  background: var(--pico-primary);
+  border: 2px solid var(--pico-background-color);
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+.dual-slider-track input[type="range"]::-moz-range-thumb {
+  pointer-events: auto;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  background: var(--pico-primary);
+  border: 2px solid var(--pico-background-color);
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+/* Z-index so end thumb stays on top when overlapping */
+#loop-end { z-index: 2; }
+#loop-start { z-index: 1; }
+
+/* Subtle hover/focus for accessibility */
+.dual-slider-track input[type="range"]:focus-visible::-webkit-slider-thumb,
+.dual-slider-track input[type="range"]:focus-visible::-moz-range-thumb {
+  outline: 2px solid var(--pico-primary);
+  outline-offset: 2px;
+}
