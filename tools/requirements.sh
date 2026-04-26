@@ -5,8 +5,10 @@
 #
 set -e
 
-rm -r vendor
+test -d vendor && rm -r vendor
+test -d assets && rm -r assets
 mkdir -p vendor
+mkdir -p assets
 cd vendor
 
 ## UI install
@@ -26,7 +28,7 @@ tar -xzf tone-15.1.22.tgz
 mv package tone
 # mp3 samples for Tone.Sampler
 wget https://github.com/nbrosowsky/tonejs-instruments/archive/refs/heads/master.zip
-unzip master.zip 
+unzip master.zip
 find ./tonejs-instruments-master -type f -name *.wav -delete
 find ./tonejs-instruments-master -type f -name *.ogg -delete
 mkdir ../assets
