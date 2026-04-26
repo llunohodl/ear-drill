@@ -1,9 +1,9 @@
-const tempoSlider = document.getElementById('tempo-slider');
-const tempoDisplay = document.getElementById('tempo-display');
-const startSlider = document.getElementById('loop-start');
-const endSlider = document.getElementById('loop-end');
-const loopDisplay = document.getElementById('loop-display');
-const highlight = document.getElementById('slider-highlight');
+const tempoSlider = document.getElementById("tempo-slider");
+const tempoDisplay = document.getElementById("tempo-display");
+const startSlider = document.getElementById("loop-start");
+const endSlider = document.getElementById("loop-end");
+const loopDisplay = document.getElementById("loop-display");
+const highlight = document.getElementById("slider-highlight");
 
 function updateTempo() {
   tempoDisplay.textContent = `${tempoSlider.value} BPM`;
@@ -21,7 +21,7 @@ function updateLoopRange() {
   }
 
   // Map 0-15 to 0%-100%
-  const maxIndex = 15;
+  const maxIndex = endSlider.max + 1;
   const leftPct = (start / maxIndex) * 100;
   const widthPct = ((end - start) / maxIndex) * 100;
   highlight.style.left = `${leftPct}%`;
@@ -31,10 +31,18 @@ function updateLoopRange() {
   loopDisplay.textContent = `Notes ${start + 1}–${end + 1}`;
 }
 
+function setLoopEndMax(totalNotes) {
+  startSlider.max = totalNotes - 1;
+  startSlider.value = startSlider.min;
+  endSlider.max = totalNotes - 1;
+  endSlider.value = endSlider.max;
+  updateLoopRange();
+}
+
 // Event listeners
-tempoSlider.addEventListener('input', updateTempo);
-startSlider.addEventListener('input', updateLoopRange);
-endSlider.addEventListener('input', updateLoopRange);
+tempoSlider.addEventListener("input", updateTempo);
+startSlider.addEventListener("input", updateLoopRange);
+endSlider.addEventListener("input", updateLoopRange);
 
 // Initialize
 updateTempo();

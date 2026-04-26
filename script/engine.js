@@ -1,9 +1,78 @@
 const SCALE_PATTERNS = {
-  diatonic_major: [0, 2, 4, 5, 7, 9, 11],
-  diatonic_minor: [0, 2, 3, 5, 7, 8, 10],
+  // diatonic
+  major: [0, 2, 4, 5, 7, 9, 11],
+  dorian: [0, 2, 3, 5, 7, 9, 10],
+  phrygian: [0, 1, 3, 5, 7, 8, 10],
+  lydian: [0, 2, 4, 6, 7, 9, 11],
+  mixollydian: [0, 2, 4, 5, 7, 9, 10],
+  minor: [0, 2, 3, 5, 7, 8, 10],
+  locrian: [0, 1, 3, 5, 6, 8, 10],
+  // pentatonic
   pentatonic_major: [0, 2, 4, 7, 9],
   pentatonic_minor: [0, 3, 5, 7, 10],
+  pentatonic_melodic_minor: [0, 2, 3, 7, 9],
+  pentatonic_suspended: [0, 2, 5, 7, 10],
+  pentatonic_dominant: [0, 2, 4, 7, 10],
+  pentatonic_major_7th: [0, 2, 4, 7, 11],
+  pentatonic_minmaj_7th: [0, 3, 5, 7, 11],
+  pentatonic_halfdim_b2: [0, 1, 3, 5, 10],
+  pentatonic_halfdim_maj2: [0, 2, 3, 6, 10],
+  // blues
   blues: [0, 3, 5, 6, 7, 10],
+  blues_minor_ext: [0, 2, 3, 5, 6, 7, 8, 10],
+  blues_major: [0, 2, 3, 4, 7, 9],
+  blues_major_ext: [0, 2, 3, 4, 5, 6, 7, 9, 10],
+  blues_BB_King: [0, 2, 3, 5, 7, 9],
+  // harmonic minor
+  harmonic_minor: [0, 2, 3, 5, 7, 8, 11],
+  locrian_6: [0, 1, 3, 5, 6, 9, 10],
+  ionian_D5: [0, 2, 4, 5, 8, 9, 11],
+  dorian_D4: [0, 2, 3, 6, 7, 9, 10],
+  phrigian_dominant: [0, 1, 4, 5, 7, 8, 10],
+  lydian_D2: [0, 3, 4, 6, 7, 9, 11],
+  locrian_b4_bb7: [0, 1, 3, 4, 6, 8, 9],
+  // harmonic major
+  harmonic_major: [0, 2, 4, 5, 7, 8, 11],
+  dorian_b5: [0, 2, 3, 5, 6, 9, 10],
+  phrygian_b4: [0, 1, 3, 4, 7, 8, 10],
+  lydian_b3: [0, 2, 3, 6, 7, 9, 11],
+  mixollydian_b2: [0, 1, 4, 5, 7, 9, 10],
+  lydian_augmented_D2: [0, 3, 4, 6, 8, 9, 11],
+  locrian_bb7: [0, 1, 3, 5, 6, 8, 9],
+  // melodic minor
+  jazz_melodic_minor: [0, 2, 3, 5, 7, 9, 11],
+  phrygian_D6: [0, 1, 3, 5, 7, 9, 10],
+  lydian_augmented: [0, 2, 4, 6, 8, 9, 11],
+  lydian_dominant: [0, 2, 4, 6, 7, 9, 10],
+  mixollydian_b6: [0, 2, 4, 5, 7, 8, 10],
+  locrian_D2: [0, 2, 3, 5, 6, 8, 10],
+  altered: [0, 1, 3, 4, 6, 8, 10],
+  // double harmonic
+  gypsy_major: [0, 1, 4, 5, 7, 8, 11],
+  lydian_D2_D6: [0, 3, 4, 6, 7, 10, 11],
+  ultraphrygian: [0, 1, 3, 4, 6, 7, 8],
+  gypsy_minor: [0, 2, 3, 6, 7, 8, 11],
+  oriental: [0, 1, 4, 5, 6, 9, 10],
+  ionian_D2_D5: [0, 3, 4, 5, 8, 9, 11],
+  locrian_bb3_bb7: [0, 1, 2, 5, 6, 8, 9],
+  // bebop
+  bebop_minor: [0, 2, 3, 5, 7, 9, 10, 11],
+  bebop_major: [0, 2, 4, 5, 7, 8, 9, 11],
+  bebop_dominant: [0, 2, 4, 5, 7, 9, 10, 11],
+  // other
+  whole_tone: [0, 2, 4, 6, 8, 10],
+  whole_half_diminished: [0, 2, 3, 5, 6, 8, 9, 11],
+  half_whole_diminished: [0, 1, 3, 4, 6, 7, 9, 10],
+  hungarian_major: [0, 3, 4, 6, 7, 9, 10],
+  eight_tone_spanish: [0, 1, 3, 4, 5, 6, 8, 10],
+  hungarian_gypsy: [0, 2, 3, 6, 7, 8, 10],
+  indian: [0, 4, 5, 7, 10],
+  chinese: [0, 4, 6, 5, 11],
+  japanese: [0, 1, 5, 7, 8],
+  hirsjoshi: [0, 2, 3, 7, 8],
+  iwato: [0, 1, 5, 6, 10],
+  persian: [0, 1, 3, 4, 5, 7, 11],
+  arabian: [0, 2, 4, 5, 6, 8, 10],
 };
 
 // Two bar rock rhytms
@@ -69,15 +138,13 @@ function getFxPath(synth) {
 function getRandomSynth() {
   if (window.instruments) {
     const keys = Object.keys(instruments);
-    const randomKey = keys[Math.floor(Math.random() * keys.length)];
+    const randomKey = getRandomElement(keys);
     console.log(`selected instrument: ${randomKey}`);
     return getFxPath(instruments[randomKey]);
   }
 
   // Failback for html only
-  const type =
-    MOD_TYPES[Math.floor(Math.random() * MOD_TYPES.length)] +
-    OSC_TYPES[Math.floor(Math.random() * OSC_TYPES.length)];
+  const type = getRandomElement(MOD_TYPES) + getRandomElement(OSC_TYPES);
 
   const partials_factor = Math.random();
   const settings = {
@@ -104,8 +171,8 @@ function getRandomSynth() {
 
 function generateApplicature() {
   //Random root
-  rootNote = NOTES[Math.floor(Math.random() * NOTES.length)];
-  octaveNumber = OCTAVES[Math.floor(Math.random() * OCTAVES.length)];
+  rootNote = getRandomElement(NOTES);
+  octaveNumber = getRandomElement(OCTAVES);
   basePos = getGuitarPosition(rootNote + octaveNumber);
 
   if (!basePos) {
@@ -115,9 +182,9 @@ function generateApplicature() {
   }
 
   //Random octave
-  const scaleTypes = Object.keys(SCALE_PATTERNS);
-  const selectedType =
-    scaleTypes[Math.floor(Math.random() * scaleTypes.length)];
+  const selectedType = getRandomElement(Object.keys(SCALE_PATTERNS));
+  window.sacle_name = selectedType.replaceAll("_", " ").replaceAll("D", "#");
+
   //Random scale
   const pattern = SCALE_PATTERNS[selectedType];
   let currentApplicature = {};
@@ -160,11 +227,10 @@ async function generateMelody() {
 
   const notes = Object.keys(applicature);
   let total_notes = 0;
-  for (let t = 0; t < 3; t++) {
-    let template =
-      RHYTHMIC_TEMPLATES[Math.floor(Math.random() * RHYTHMIC_TEMPLATES.length)];
+  for (let t = 0; t < 4; t++) {
+    let template = getRandomElement(RHYTHMIC_TEMPLATES);
     for (let i = 0; i < template.length; i++) {
-      const note = notes[Math.floor(Math.random() * notes.length)];
+      const note = getRandomElement(notes);
       let duration = template[i];
       let duration_length = duration.slice(0, -1);
       if (duration.endsWith("n")) {
@@ -181,6 +247,8 @@ async function generateMelody() {
     }
     window.currentPositions.push("|"); // bar at alphatex
   }
+  // Update the loop end max value in slider.js
+  window.setLoopEndMax(total_notes);
 }
 
 async function playMelody(begin = null, end = null) {
@@ -286,7 +354,9 @@ async function renderTabs() {
   try {
     console.log(`Print: ${window.notes}`);
     // Process Notes
-    let tab = "\n" + window.currentPositions.join(" ");
+    let tab =
+      `\\title "${window.sacle_name} scale melody"\n.\n` +
+      window.currentPositions.join(" ");
 
     if (!window.api) {
       const element = document.getElementById("tab-container");
@@ -320,4 +390,9 @@ if ("serviceWorker" in navigator) {
 
   generateMelody(false);
   console.log("Melody geneated");
+}
+
+function getRandomElement(array) {
+  if (!array) return null;
+  return array[Math.floor(Math.random() * array.length)];
 }
