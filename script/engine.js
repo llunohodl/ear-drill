@@ -108,48 +108,43 @@ const OSC_TYPES = ["sine", "square", "sawtooth", "triangle"];
 const MOD_TYPES = ["am", "fm", "fat"];
 
 function getFxPath(synth) {
-  dist = new Tone.Distortion(Math.random() * 0.5);
+  const dist = new Tone.Distortion(Math.random() * 0.5);
+  const chorusChain = getChorusChain(); // [effect1, effect2, ...]
 
-  if (Math.random() >= 0.5) {
-    modulation = new Tone.Chorus(
-      Math.random() * 8 + 2,
-      Math.random() * 2.5 + 0.5,
-      0.5,
-    ).start();
-  } else {
-    modulation = new Tone.Phaser({
-      frequency: 5 + Math.random() * 20,
-      octaves: 1 + Math.random() * 3,
-      baseFrequency: 100 + Math.random() * 200,
-    });
+  let signal = synth;
+
+  // Chain distortion (optional)
+  if (Math.random() > 0.3) {
+    signal = signal.chain(dist);
   }
 
-  delay = new Tone.FeedbackDelay("8n", Math.random() * 0.4);
-
-  if (Math.random() >= 0.5) {
-    space = new Tone.Reverb(Math.random() * 9 + 1);
-  } else {
-    space = new Tone.JCReverb(Math.random() * 0.85 + 0.15).toDestination();
+  // Chain chorus effects
+  for (const effect of chorusChain) {
+    signal = signal.chain(effect);
   }
 
-  return synth.chain(dist, modulation, delay, space, Tone.Destination);
+  // Add modulation/distortion to destination
+  return signal.chain(
+    new Tone.Distortion(Math.random() * 0.3),
+    new Tone.FeedbackDelay("8n", Math.random() * 0.3),
+    Tone.Destination,
+  );
 }
 
 function getRandomSynth() {
   if (window.instruments) {
-    const keys = Object.keys(instruments);
-    const randomKey = getRandomElement(keys);
-    console.log(`selected instrument: ${randomKey}`);
-    return getFxPath(instruments[randomKey]);
+    window.instrument_name = getRandomInstrument();
+    return getFxPath(instruments[window.instrument_name]);
   }
 
   // Failback for html only
-  const type = getRandomElement(MOD_TYPES) + getRandomElement(OSC_TYPES);
+  window.instrument_name =
+    getRandomElement(MOD_TYPES) + getRandomElement(OSC_TYPES);
 
   const partials_factor = Math.random();
   const settings = {
     oscillator: {
-      type: type,
+      type: window.instrument_name,
       partials: [
         1.0,
         partials_factor * 0.25,
@@ -183,7 +178,10 @@ function generateApplicature() {
 
   //Random octave
   const selectedType = getRandomElement(Object.keys(SCALE_PATTERNS));
-  window.sacle_name = selectedType.replaceAll("_", " ").replaceAll("D", "#");
+  window.sacle_name = (rootNote + " " + selectedType)
+    .replaceAll("_", " ")
+    .replaceAll("D", "#");
+  window.scale_notes = [];
 
   //Random scale
   const pattern = SCALE_PATTERNS[selectedType];
@@ -209,62 +207,83 @@ function generateApplicature() {
         );
     }
     currentApplicature[note] = `${basePos.fret + interval}.${basePos.string}`;
-
-    console.log(`${note}  ${currentApplicature[note]}`);
+    window.scale_notes.push(note);
   });
   return currentApplicature;
 }
 
 async function generateMelody() {
-  const applicature = generateApplicature();
-
-  window.notes = [];
-  window.durations = [];
-  window.currentPositions = [];
+  const applicature = generateApplicature(); // scale and note positions
+  window.notes = []; //notes in melody, null for pause
+  window.notes_map = []; // indexes of all sounds (all pauses skiped)
+  window.durations = []; // note durations 1n,2n,4n,8n,16n ... etc.
   window.synth = null;
 
   if (window.synth) window.synth.triggerRelease();
 
   const notes = Object.keys(applicature);
-  let total_notes = 0;
-  for (let t = 0; t < 4; t++) {
+  let note_index = 0;
+  let tab_arr = [];
+  for (let bar = 0; bar < 4; bar++) {
     let template = getRandomElement(RHYTHMIC_TEMPLATES);
     for (let i = 0; i < template.length; i++) {
       const note = getRandomElement(notes);
       let duration = template[i];
       let duration_length = duration.slice(0, -1);
+      let pos = applicature[note];
       if (duration.endsWith("n")) {
         // note
         window.notes.push(note);
-        window.currentPositions.push(`${applicature[note]}.${duration_length}`);
-        total_notes++;
+        tab_arr.push(`${pos}.${duration_length}`);
+        window.notes_map.push(note_index);
       } else {
         // pause
         window.notes.push(null);
-        window.currentPositions.push(`r.${duration_length}`);
+        tab_arr.push(`r.${duration_length}`);
       }
+      note_index++;
       window.durations.push(duration.toLowerCase());
     }
-    window.currentPositions.push("|"); // bar at alphatex
+    tab_arr.push("|"); // bar at alphatex
   }
+
+  // Last bar with scale
+  window.scale_notes.forEach((note) => {
+    tab_arr.push(`${applicature[note]}.16`);
+  });
+  tab_arr.push("|");
+  window.tab = tab_arr.join(" ");
+  console.log(window.tab);
   // Update the loop end max value in slider.js
-  window.setLoopEndMax(total_notes);
+  const max_end = window.notes_map.length;
+  document.getElementById("loop-end").max = max_end;
+  document.getElementById("loop-start").max = max_end;
+  window.updateLoopRange();
 }
 
 async function playMelody(begin = null, end = null) {
   if (!window.synth) window.synth = getRandomSynth();
   else window.synth.triggerRelease();
+  const max_end = window.notes_map.length - 1;
 
   if (!begin) begin = 0;
-  if (!end) end = window.notes.length - 1;
-
+  if (!end) end = max_end;
+  if (end - begin <= 0) {
+    if (end < max_end) {
+      end++;
+    } else {
+      begin = begin > 0 ? begin - 1 : 0;
+      end = brgin + 1;
+    }
+  }
   Tone.Transport.bpm.value = Number(
     document.getElementById("tempo-slider").value,
   );
   await Tone.start();
 
   let now = Tone.now();
-  for (let i = begin; i <= end; i++) {
+  // play all selected notes with pauses between them
+  for (let i = window.notes_map[begin]; i < window.notes_map[end]; i++) {
     console.log(`play ${window.notes[i]} ${window.durations[i]}`);
     if (window.notes[i]) {
       window.synth.triggerAttackRelease(
@@ -355,8 +374,8 @@ async function renderTabs() {
     console.log(`Print: ${window.notes}`);
     // Process Notes
     let tab =
-      `\\title "${window.sacle_name} scale melody"\n.\n` +
-      window.currentPositions.join(" ");
+      `\\title "${window.sacle_name}"\n\\subtitle "${window.instrument_name}"\n.\n` +
+      window.tab;
 
     if (!window.api) {
       const element = document.getElementById("tab-container");
@@ -372,6 +391,10 @@ async function renderTabs() {
     console.error(e);
   }
 }
+
+// Expose chorus functions globally for HTML-only fallback
+window.getChorusChain = getChorusChain;
+window.getRandomChorusMode = () => getRandomElement(Object.keys(CHORUS_CHAINS));
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
@@ -395,4 +418,98 @@ if ("serviceWorker" in navigator) {
 function getRandomElement(array) {
   if (!array) return null;
   return array[Math.floor(Math.random() * array.length)];
+}
+
+function getRandomInstrument() {
+  const instr = Object.keys(instruments);
+  // Prefer guitar and piano
+  weights = instr.map((name) => {
+    if (name === "guitar-electric") return 240;
+    if (name === "bass-electric") return 200;
+    if (name.includes("guitar")) return 180;
+    if (name === "phiano") return 120;
+    if (name in ["violin", "cello", "contrabass"]) return 30;
+    return 15;
+  });
+
+  const totalWeight = weights.reduce((a, b) => a + b, 0);
+
+  let random = Math.random() * totalWeight;
+
+  for (let i = 0; i < instr.length; i++) {
+    if (random < weights[i]) {
+      return instr[i];
+    }
+    random -= weights[i];
+  }
+  // failback
+  return "guitar-electric";
+}
+
+window.addEventListener("keydown", (event) => {
+  if (event.key === " ") {
+    event.preventDefault(); // Stop page from scrolling
+    playLoop();
+  } else if (event.key >= "1" && event.key <= "9") {
+    event.preventDefault();
+    selectLoopRange(parseInt(event.key));
+    playLoop();
+  } else if (event.key === "ArrowLeft") {
+    event.preventDefault();
+    shiftLoopStart(-1);
+  } else if (event.key === "ArrowRight") {
+    event.preventDefault();
+    shiftLoopStart(1);
+  } else if (event.key === "ArrowUp") {
+    event.preventDefault();
+    adjustTempo(5);
+  } else if (event.key === "ArrowDown") {
+    event.preventDefault();
+    adjustTempo(-5);
+  } else if (event.key === "g") {
+    event.preventDefault();
+    generateMelody();
+    playMelody();
+  } else if (event.key === "Enter") {
+    event.preventDefault();
+    playMelody();
+  } else if (event.key === "t") {
+    event.preventDefault();
+    renderTabs();
+  }
+});
+
+function selectLoopRange(size) {
+  const start = Number(document.getElementById("loop-start").value);
+  const end = Math.min(start + size - 1, window.notes.length - 1);
+  document.getElementById("loop-start").value = start;
+  document.getElementById("loop-end").value = end;
+  updateLoopRange();
+}
+
+function shiftLoopStart(delta) {
+  const currentStart = Number(document.getElementById("loop-start").value);
+  const currentEnd = Number(document.getElementById("loop-end").value);
+  let newStart = currentStart + delta;
+  let newEnd = currentEnd + delta;
+  document.getElementById("loop-start").value = newStart;
+  document.getElementById("loop-end").value = newEnd;
+  updateLoopRange();
+}
+
+function adjustTempo(delta) {
+  const slider = document.getElementById("tempo-slider");
+  let currentBPM = Number(slider.value);
+  const maxBPM = 220,
+    minBPM = 10;
+
+  let newBPM = Math.max(minBPM, Math.min(maxBPM, currentBPM + delta));
+  slider.value = newBPM;
+  document.getElementById("tempo-display").textContent = `${newBPM} BPM`;
+}
+
+function getSelectedLoopRange() {
+  const start = Number(document.getElementById("loop-start").value);
+  const end = Number(document.getElementById("loop-end").value);
+  return { start, end };
 }
